@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Database Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a0000;
+            --secondary-color: #ff0000;
+            --accent-color: #ff3333;
+            --background-color: #000000;
+            --text-color: #ff6666;
+            --card-background: #0a0000;
+        }
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            line-height: 1.6;
+            position: relative;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            padding: 20px 0;
+            text-align: center;
+        }
+        h1, h2 {
+            margin: 0;
+            font-weight: 700;
+        }
+        .section {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid var(--secondary-color);
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            box-sizing: border-box;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        button {
+            background-color: var(--secondary-color);
+            color: var(--background-color);
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+            margin-top: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: var(--accent-color);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: var(--card-background);
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+        }
+        #status-message {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--accent-color);
+        }
+        #raw-users-modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background-color: var(--card-background);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid var(--secondary-color);
+            width: 80%;
+            color: var(--text-color);
+        }
+        .close {
+            color: var(--secondary-color);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .corner-text {
+            position: fixed;
+            color: var(--secondary-color);
+            font-size: 14px;
+            padding: 10px;
+        }
+        .top-left { top: 0; left: 0; }
+        .top-right { top: 0; right: 0; }
+        .bottom-left { bottom: 0; left: 0; }
+        .bottom-right { bottom: 0; right: 0; }
+        .side-text {
+            position: fixed;
+            color: var(--secondary-color);
+            font-size: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+        .left-side { left: 10px; }
+        .right-side { right: 10px; }
+    </style>
+</head>
+<body>
+    <div class="corner-text top-left">System Status: Online</div>
+    <div class="corner-text top-right">Access Level: Admin</div>
+    <div class="corner-text bottom-left">Last Update: 20-10-2024</div>
+    <header>
+        <h1>Professional Database Management System</h1>
+    </header>
+    <div class="container">
+        <div id="database-section">
+            <div class="section">
+                <h2>Add User</h2>
+                <input type="text" id="new-username" placeholder="Username">
+                <select id="timer">
+                    <option value="10">10 seconds</option>
+                    <option value="604800">1 week</option>
+                    <option value="2592000">1 month</option>
+                    <option value="-1">Forever</option>
+                </select>
+                <button onclick="addUser()">Add User</button>
+            </div>
+            <div class="section">
+                <h2>User Management</h2>
+                <button onclick="deleteAllUsers()">Delete All Users</button>
+                <button onclick="viewRawUsers()">View Raw Users</button>
+            </div>
+            <div id="status-message"></div>
+            <div id="user-display"></div>
+            <table id="user-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Timer</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="raw-users-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Raw Users Data</h2>
+            <pre id="raw-users-data" style="white-space: pre-wrap; word-wrap: break-word;"></pre>
+        </div>
+    </div>
+
+    <script>
+        var users = [];
+        var MASTER_KEY = '$2a$10$NlNeLmqtRMdsMHbpFlkOieP28fez1WWB2T2qLl0z56m8X8b0/nnbK';
+        var BIN_URL = 'https://api.jsonbin.io/v3/b/671559c0e41b4d34e44608ca';
+        var lastRequestTime = 0;
+        var REQUEST_INTERVAL = 1000;
+
+        function loadUsers() {
+            throttleRequest().then(function() {
+                updateStatusMessage('Loading users...');
+                fetch(BIN_URL, {
+                    headers: {
+                        'X-Master-Key': MASTER_KEY
+                    }
+                }).then(function(response) {
+                    if (response.status === 429) {
+                        throw new Error('Rate limit exceeded. Please try again later.');
+                    }
+                    return response.json();
+                }).then(function(data) {
+                    users = data.record.users || [];
+                    updateUserTable();
+                    updateStatusMessage('Users loaded successfully');
+                    return saveUsers();
+                }).catch(function(error) {
+                    console.error('Error loading users:', error);
+                    updateStatusMessage('Error loading users: ' + error.message);
+                });
+            });
+        }
+
+        function saveUsers() {
+            return throttleRequest().then(function() {
+                updateStatusMessage('Uploading to Database...');
+                return fetch(BIN_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': MASTER_KEY
+                    },
+                    body: JSON.stringify({ users: users })
+                }).then(function(response) {
+                    if (response.status === 429) {
+                        throw new Error('Rate limit exceeded. Please try again later.');
+                    }
+                    updateStatusMessage('Upload successful');
+                }).catch(function(error) {
+                    console.error('Error saving users:', error);
+                    updateStatusMessage('Error uploading to Database: ' + error.message);
+                });
+            });
+        }
+
+        function throttleRequest() {
+            var now = Date.now();
+            var timeElapsed = now - lastRequestTime;
+            if (timeElapsed < REQUEST_INTERVAL) {
+                return new Promise(function(resolve) {
+                    setTimeout(resolve, REQUEST_INTERVAL - timeElapsed);
+                }).then(function() {
+                    lastRequestTime = Date.now();
+                });
+            } else {
+                lastRequestTime = now;
+                return Promise.resolve();
+            }
+        }
+
+        function addUser() {
+            var username = document.getElementById('new-username').value;
+            var timer = parseInt(document.getElementById('timer').value);
+            if (username && timer) {
+                var user = { username: username, timer: timer, startTime: Date.now() };
+                users.push(user);
+                updateUserTable();
+                document.getElementById('new-username').value = '';
+                document.getElementById('timer').value = '10';
+                saveUsers();
+            } else {
+                alert('Please fill all fields');
+            }
+        }
+
+        function deleteUser(index) {
+            users.splice(index, 1);
+            updateUserTable();
+            saveUsers();
+        }
+
+        function deleteAllUsers() {
+            if (confirm('Are you sure you want to delete all users?')) {
+                users = [];
+                updateUserTable();
+                saveUsers();
+            }
+        }
+
+        function updateUserTable() {
+            var userList = document.getElementById('user-list');
+            userList.innerHTML = '';
+            users.forEach(function(user, index) {
+                var row = userList.insertRow();
+                row.insertCell(0).textContent = user.username;
+                var timerCell = row.insertCell(1);
+                var deleteCell = row.insertCell(2);
+                var deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = function() { deleteUser(index); };
+                deleteCell.appendChild(deleteButton);
+
+                updateTimer(user, timerCell);
+            });
+            updateUserDisplay();
+        }
+
+        function updateTimer(user, cell) {
+            function updateTimerDisplay() {
+                if (user.timer === -1) {
+                    cell.textContent = 'Forever';
+                    return;
+                }
+                var elapsed = Math.floor((Date.now() - user.startTime) / 1000);
+                var remaining = Math.max(0, user.timer - elapsed);
+                cell.textContent = formatTime(remaining);
+                if (remaining === 0) {
+                    deleteUser(users.indexOf(user));
+                } else {
+                    setTimeout(updateTimerDisplay, 1000);
+                }
+            }
+            updateTimerDisplay();
+        }
+
+        function formatTime(seconds) {
+            if (seconds >= 86400) {
+                return Math.floor(seconds / 86400) + 'd';
+            } else if (seconds >= 3600) {
+                return Math.floor(seconds / 3600) + 'h';
+            } else if (seconds >= 60) {
+                return Math.floor(seconds / 60) + 'm';
+            } else {
+                return seconds + 's';
+            }
+        }
+
+        function updateStatusMessage(message) {
+            var statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            setTimeout(function() {
+                statusElement.textContent = '';
+            }, 3000);
+        }
+
+        function updateUserDisplay() {
+            var userDisplay = document.getElementById('user-display');
+            userDisplay.innerHTML = '<h2>Current Users</h2>';
+            if (users.length === 0) {
+                userDisplay.innerHTML += '<p>No users currently in the system.</p>';
+            } else {
+                var userList = document.createElement('ul');
+                users.forEach(function(user) {
+                    var listItem = document.createElement('li');
+                    listItem.textContent = user.username + ' - Timer: ' + (user.timer === -1 ? 'Forever' : formatTime(user.timer));
+                    userList.appendChild(listItem);
+                });
+                userDisplay.appendChild(userList);
+            }
+        }
+
+        function viewRawUsers() {
+            var modal = document.getElementById('raw-users-modal');
+            var rawUsersData = document.getElementById('raw-users-data');
+            rawUsersData.textContent = JSON.stringify(users, null, 2);
+            modal.style.display = 'block';
+        }
+
+        window.onclick = function(event) {
+            var modal = document.getElementById('raw-users-modal');
+            if (event.target == modal || event.target.className == 'close') {
+                modal.style.display = 'none';
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+            setInterval(function() {
+                users = users.filter(function(user) {
+                    if (user.timer === -1) return true;
+                    var elapsed = Math.floor((Date.now() - user.startTime) / 1000);
+                    return elapsed < user.timer;
+                });
+                updateUserTable();
+                saveUsers();
+            }, 30000);
+        });
+
+        window.addEventListener('beforeunload', function(event) {
+            saveUsers();
+        });
+    </script>
+</body>
+</html>
